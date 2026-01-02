@@ -1,0 +1,333 @@
+import React, { useState, useMemo, useEffect } from 'react';
+import { Search, Copy, Check, Palette, Moon, Sun, ShoppingBag, Edit3, Save, Download, Upload, Plus, Trash2, Image as ImageIcon, Info, Grid } from 'lucide-react';
+
+// 初始模板數據 (48 個色號)
+const createEmptyYarns = () => {
+  return Array.from({ length: 48 }, (_, i) => ({
+    id: (i + 1).toString(),
+    number: (i + 1).toString().padStart(2, '0'),
+    hex: '#e5e5e5', // 預設灰色
+    category: '未分類',
+    image: null // 存放 Base64 圖片
+  }));
+};
+
+// 毛線視覺組件
+const YarnDisplay = ({ item, isEditing, onImageUpload }) => {
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        onImageUpload(item.id, reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  return (
+    <div className="relative w-full h-44 flex items-center justify-center overflow-hidden bg-stone-50 dark:bg-gray-900 transition-colors">
+      {item.image ? (
+        <img 
+          src={item.image} 
+          alt={item.number} 
+          className="w-32 h-32 object-contain drop-shadow-2xl transform rotate-6 transition-transform group-hover:scale-110 duration-500"
+        />
+      ) : (
+        <div 
+          className="relative w-32 h-32 rounded-full shadow-inner transform rotate-12 flex items-center justify-center transition-transform group-hover:scale-110 duration-500"
+          style={{ 
+            backgroundColor: item.hex,
+            boxShadow: `inset 0 0 35px rgba(0,0,0,0.2), 10px 15px 35px rgba(0,0,0,0.25)`,
+            backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.1) 5px, transparent 6px)`
+          }}
+        >
+          <div className="w-6 h-24 bg-black/15 rounded-full blur-md"></div>
+        </div>
+      )}
+
+      {isEditing && (
+        <label className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer">
+          <Upload className="text-white mb-2" />
+          <span className="text-white text-[10px] font-bold">更換照片</span>
+          <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
+        </label>
+      )}
+
+      <div className="absolute -bottom-2 -right-2 w-20 h-20 border-b-8 border-r-8 border-black/5 rounded-br-[3rem] pointer-events-none"></div>
+    </div>
+  );
+};
+
+const YarnCard = ({ item, isEditing, copiedId, onCopy, updateItem }) => {
+  return (
+    <div className="group relative flex flex-col bg-white dark:bg-gray-800 rounded-[3rem] shadow-sm hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 overflow-hidden border border-stone-100 dark:border-gray-700">
+      <YarnDisplay 
+        item={item} 
+        isEditing={isEditing} 
+        onImageUpload={(id, img) => updateItem(id, { image: img })} 
+      />
+      
+      {!isEditing && (
+        <div className="absolute top-5 right-5 opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0">
+          <button 
+            onClick={() => onCopy(item.number, item.id)}
+            className="p-3.5 bg-white/90 dark:bg-gray-800/90 backdrop-blur shadow-2xl rounded-2xl hover:bg-stone-900 hover:text-white dark:hover:bg-white dark:hover:text-black transition-all active:scale-90"
+          >
+            {copiedId === item.id ? <Check size={20} /> : <Copy size={20} />}
+          </button>
+        </div>
+      )}
+
+      <div className="p-8 flex flex-col items-center relative bg-white dark:bg-gray-800">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-stone-50 dark:bg-gray-950 rounded-full border-4 border-white dark:border-gray-800 shadow-inner"></div>
+        
+        {isEditing ? (
+          <div className="w-full space-y-3 pt-2">
+            <div className="flex space-x-2">
+              <input 
+                type="text" 
+                value={item.number} 
+                onChange={(e) => updateItem(item.id, { number: e.target.value })}
+                className="w-1/2 text-center text-xl font-black bg-stone-100 dark:bg-gray-700 border-none rounded-xl py-2"
+                placeholder="編號"
+              />
+              <input 
+                type="color" 
+                value={item.hex} 
+                onChange={(e) => updateItem(item.id, { hex: e.target.value })}
+                className="w-1/2 h-11 bg-stone-100 dark:bg-gray-700 border-none rounded-xl p-1 cursor-pointer"
+              />
+            </div>
+            <select 
+              value={item.category} 
+              onChange={(e) => updateItem(item.id, { category: e.target.value })}
+              className="w-full text-[10px] font-bold bg-stone-100 dark:bg-gray-700 border-none rounded-xl py-2 px-3 uppercase tracking-wider"
+            >
+              <option value="未分類">未分類</option>
+              <option value="白黃色系">白黃色系</option>
+              <option value="橘紅系列">橘紅系列</option>
+              <option value="粉紫色系">粉紫色系</option>
+              <option value="藍綠色系">藍綠色系</option>
+              <option value="大地色系">大地色系</option>
+              <option value="灰黑色系">灰黑色系</option>
+            </select>
+          </div>
+        ) : (
+          <>
+            <span className="text-6xl font-black text-stone-900 dark:text-white font-mono mb-3 tracking-tighter">
+              {item.number}
+            </span>
+            <div className="flex flex-col items-center space-y-3">
+              <span className="text-[11px] font-black text-stone-400 dark:text-gray-500 uppercase tracking-[0.25em]">
+                HEX: {item.hex}
+              </span>
+              <span className="px-4 py-1.5 bg-stone-100 dark:bg-gray-700 rounded-xl text-[10px] font-black text-stone-500 dark:text-gray-300 uppercase tracking-wider">
+                {item.category}
+              </span>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default function App() {
+  const [yarns, setYarns] = useState(createEmptyYarns());
+  const [isEditing, setIsEditing] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [copiedId, setCopiedId] = useState(null);
+  const [activeCategory, setActiveCategory] = useState('全部');
+
+  const categories = ['全部', '白黃色系', '橘紅系列', '粉紫色系', '藍綠色系', '大地色系', '灰黑色系', '未分類'];
+
+  const filteredYarns = useMemo(() => {
+    return yarns.filter(yarn => {
+      const matchesSearch = yarn.number.includes(searchTerm) || yarn.hex.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = activeCategory === '全部' || yarn.category === activeCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [yarns, searchTerm, activeCategory]);
+
+  const updateItem = (id, updates) => {
+    setYarns(prev => prev.map(y => y.id === id ? { ...y, ...updates } : y));
+  };
+
+  const exportData = () => {
+    const dataStr = JSON.stringify(yarns, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', 'yarn_palette.json');
+    linkElement.click();
+  };
+
+  const importData = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const json = JSON.parse(event.target.result);
+          setYarns(json);
+        } catch (err) {
+          alert('讀取失敗，請確認檔案格式');
+        }
+      };
+      reader.readAsText(file);
+    }
+  };
+
+  const handleCopy = (text, id) => {
+    const dummy = document.createElement("textarea");
+    document.body.appendChild(dummy);
+    dummy.value = text;
+    dummy.select();
+    document.execCommand("copy");
+    document.body.removeChild(dummy);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 1500);
+  };
+
+  return (
+    <div className={`min-h-screen transition-colors duration-500 ${isDarkMode ? 'dark bg-gray-950 text-white' : 'bg-stone-50 text-stone-900'}`}>
+      {/* 導航欄 */}
+      <header className="sticky top-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-stone-200/50 dark:border-gray-800">
+        <div className="max-w-[1400px] mx-auto px-8 h-28 flex items-center justify-between">
+          <div className="flex items-center space-x-5">
+            <div className="w-14 h-14 bg-stone-900 dark:bg-white rounded-[1.25rem] flex items-center justify-center shadow-2xl">
+              <ShoppingBag className="text-white dark:text-stone-900 w-7 h-7" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-black tracking-tighter uppercase leading-none">Yarn Editor</h1>
+              <p className="text-[11px] text-stone-400 font-bold uppercase tracking-[0.4em] mt-1.5">Custom Color Palette Builder</p>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-4 flex-1 justify-end max-w-2xl">
+            <div className="relative flex-1 max-w-xs group">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-stone-900 transition-colors w-5 h-5" />
+              <input 
+                type="text" 
+                placeholder="搜尋編號..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-12 pr-6 py-4 rounded-[1.2rem] bg-stone-100 dark:bg-gray-800 border-none focus:ring-4 focus:ring-stone-200 dark:focus:ring-gray-700 text-sm font-bold transition-all"
+              />
+            </div>
+            
+            <button 
+              onClick={() => setIsEditing(!isEditing)}
+              className={`flex items-center space-x-2 px-6 py-4 rounded-[1.2rem] font-black text-xs tracking-widest uppercase transition-all ${isEditing ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white dark:bg-gray-800 border border-stone-100 dark:border-gray-700 text-stone-600 dark:text-gray-300'}`}
+            >
+              {isEditing ? <><Save size={16} /> <span>完成編輯</span></> : <><Edit3 size={16} /> <span>編輯模式</span></>}
+            </button>
+
+            <button 
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              className="w-14 h-14 rounded-[1.2rem] bg-white dark:bg-gray-800 shadow-sm border border-stone-100 dark:border-gray-700 flex items-center justify-center hover:bg-stone-50 dark:hover:bg-gray-700 transition-all active:scale-90"
+            >
+              {isDarkMode ? <Sun size={24} /> : <Moon size={24} />}
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-[1400px] mx-auto px-8 py-16">
+        {/* 控制按鈕區 */}
+        <div className="flex flex-col space-y-10 mb-20">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap gap-4">
+              {categories.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveCategory(cat)}
+                  className={`px-8 py-4 rounded-[1.5rem] text-[10px] font-black tracking-[0.2em] uppercase transition-all transform active:scale-95 ${
+                    activeCategory === cat 
+                      ? 'bg-stone-900 text-white dark:bg-white dark:text-stone-900 shadow-2xl translate-y-[-4px]' 
+                      : 'bg-white text-stone-400 dark:bg-gray-800 hover:bg-stone-100 dark:hover:bg-gray-700 border border-stone-100 dark:border-gray-700'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+
+            {isEditing && (
+              <div className="flex items-center space-x-3">
+                <label className="flex items-center space-x-2 px-6 py-4 bg-emerald-50 text-emerald-600 rounded-2xl cursor-pointer hover:bg-emerald-100 transition-colors">
+                  <Upload size={16} />
+                  <span className="text-[10px] font-black uppercase tracking-widest">匯入 JSON</span>
+                  <input type="file" className="hidden" accept=".json" onChange={importData} />
+                </label>
+                <button 
+                  onClick={exportData}
+                  className="flex items-center space-x-2 px-6 py-4 bg-stone-900 text-white rounded-2xl hover:bg-stone-800 transition-colors"
+                >
+                  <Download size={16} />
+                  <span className="text-[10px] font-black uppercase tracking-widest">匯出設定檔</span>
+                </button>
+              </div>
+            )}
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4 text-stone-400 bg-white dark:bg-gray-800 px-6 py-3 rounded-2xl border border-stone-100 dark:border-gray-700 shadow-sm">
+              <Info size={18} className="text-stone-900 dark:text-white" />
+              <span className="text-xs font-black tracking-wide uppercase">點擊右上方可切換編輯模式</span>
+            </div>
+            <div className="hidden md:flex items-center space-x-2 text-[10px] font-black uppercase text-stone-400">
+              <Grid size={14} />
+              <span>網格顯示模式</span>
+            </div>
+          </div>
+
+          {isEditing && (
+             <div className="flex items-center space-x-4 text-stone-400 bg-amber-50 dark:bg-amber-900/10 px-6 py-4 rounded-2xl border border-amber-100 dark:border-amber-900/30">
+              <Info size={18} className="text-amber-600" />
+              <span className="text-xs font-bold text-amber-800 dark:text-amber-400 uppercase tracking-wide">
+                編輯提示：您可以點擊色塊位置上傳毛線圖片，或直接在下方輸入色號與選擇顏色。
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* 毛線網格 */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-12">
+          {filteredYarns.map(yarn => (
+            <YarnCard 
+              key={yarn.id} 
+              item={yarn} 
+              isEditing={isEditing}
+              copiedId={copiedId} 
+              onCopy={handleCopy} 
+              updateItem={updateItem}
+            />
+          ))}
+          
+          {isEditing && (
+            <button 
+              onClick={() => setYarns([...yarns, { id: Date.now().toString(), number: '?', hex: '#e5e5e5', category: '未分類', image: null }])}
+              className="flex flex-col items-center justify-center h-[500px] bg-dashed-border bg-stone-100/50 dark:bg-gray-800/30 rounded-[3rem] border-4 border-dashed border-stone-200 dark:border-gray-700 hover:bg-stone-100 dark:hover:bg-gray-800 transition-all text-stone-300 hover:text-stone-900 dark:hover:text-white"
+            >
+              <Plus size={48} />
+              <span className="mt-4 font-black uppercase tracking-[0.2em] text-xs">新增色卡</span>
+            </button>
+          )}
+        </div>
+      </main>
+
+      <footer className="py-40 text-center opacity-30">
+        <p className="text-[12px] font-black uppercase tracking-[0.6em]">Yarn Studio Management System &bull; v2.0</p>
+      </footer>
+
+      {/* 提示彈窗 */}
+      <div className={`fixed bottom-16 left-1/2 -translate-x-1/2 bg-stone-900 dark:bg-white text-white dark:text-stone-900 px-12 py-6 rounded-[2.5rem] shadow-2xl transition-all duration-500 z-[100] flex items-center space-x-5 ${copiedId ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-24 scale-90 pointer-events-none'}`}>
+        <div className="w-4 h-4 bg-green-400 rounded-full animate-pulse"></div>
+        <span className="text-base font-black tracking-[0.2em] uppercase">編號已複製</span>
+      </div>
+    </div>
+  );
+}
